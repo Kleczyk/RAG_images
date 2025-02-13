@@ -27,6 +27,10 @@ def extract_image_features(image):
     return features.numpy().astype('float32')
 
 
+# Inicjalizacja zmiennych globalnych
+index = None  # Indeks FAISS będzie inicjalizowany dynamicznie
+image_embeddings = []
+image_labels = []
 
 
 # Funkcja dodawania obrazu do bazy
@@ -34,10 +38,10 @@ def add_image_to_database(image, image_name):
     global index, image_embeddings, image_labels
     embed = extract_image_features(image)
 
-    # Sprawdzenie, czy wymiar osadzeń zgadza się z wymiarami indeksu FAISS
-    if embed.shape[1] != embedding_dim:
-        raise ValueError(
-            f"Wymiar osadzeń ({embed.shape[1]}) nie zgadza się z wymiarami indeksu FAISS ({embedding_dim}).")
+    # Jeśli indeks FAISS nie został jeszcze utworzony, utwórz go z odpowiednim wymiarem
+    if index is None:
+        embedding_dim = embed.shape[1]  # Pobranie wymiaru osadzeń z pierwszego obrazu
+        index = faiss.IndexFlatL2(embedding_dim)  # Inicjalizacja indeksu FAISS
 
     # Dodanie osadzeń i etykiety do bazy
     image_embeddings.append(embed)
