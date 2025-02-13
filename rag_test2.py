@@ -6,97 +6,97 @@ from PIL import Image
 import gradio as gr
 import os
 
-# Inicjalizacja modelu BLIP-2
+# Initialization of the BLIP-2 model
 processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
 model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large")
 
 
-# Funkcja do ekstrakcji cech obrazu
+# Function to extract image features
 def extract_image_features(image):
-    """Ekstrahuje cechy obrazu jako wektor osadzeń."""
-    # Konwersja obrazu do formatu RGB (jeśli nie jest w tym formacie)
+    """Extracts image features as an embedding vector."""
+    # Convert image to RGB format (if not already in this format)
     image = image.convert('RGB')
 
-    # Przeskalowanie obrazu do rozmiaru 224x224 (wymagany rozmiar dla modelu BLIP)
+    # Resize the image to 224x224 (required size for the BLIP model)
     image = image.resize((224, 224))
 
-    # Przetwarzanie obrazu za pomocą procesora BLIP
+    # Process the image using the BLIP processor
     inputs = processor(images=image, return_tensors="pt")
 
-    # Ekstrakcja cech za pomocą modelu BLIP
+    # Extract features using the BLIP model
     with torch.no_grad():
-        features = model.vision_model(inputs.pixel_values)[1]  # Pobranie osadzeń wizualnych
+        features = model.vision_model(inputs.pixel_values)[1]  # Retrieve visual embeddings
 
-    # Konwersja cech do formatu numpy i zwrócenie
+    # Convert features to numpy format and return
     return features.numpy().astype('float32')
 
 
-# Inicjalizacja zmiennych globalnych
-index = None  # Indeks FAISS będzie inicjalizowany dynamicznie
+# Initialization of global variables
+index = None  # FAISS index will be initialized dynamically
 image_embeddings = []
 image_labels = []
 
 
-# Funkcja dodawania wielu obrazów do bazy
+# Function to add multiple images to the database
 def add_images_to_database(images):
     global index, image_embeddings, image_labels
     results = []
 
     for image in images:
-        # Pobranie nazwy pliku (bez ścieżki)
+        # Get the file name (without path)
         image_name = os.path.basename(image.name)
 
-        # Otwarcie obrazu za pomocą PIL
+        # Open the image using PIL
         img = Image.open(image.name)
 
-        # Ekstrakcja cech obrazu
+        # Extract image features
         embed = extract_image_features(img)
 
-        # Jeśli indeks FAISS nie został jeszcze utworzony, utwórz go z odpowiednim wymiarem
+        # If FAISS index has not been created yet, initialize it with the correct dimension
         if index is None:
-            embedding_dim = embed.shape[1]  # Pobranie wymiaru osadzeń z pierwszego obrazu
-            index = faiss.IndexFlatL2(embedding_dim)  # Inicjalizacja indeksu FAISS
+            embedding_dim = embed.shape[1]  # Get embedding dimension from the first image
+            index = faiss.IndexFlatL2(embedding_dim)  # Initialize FAISS index
 
-        # Dodanie osadzeń i etykiety do bazy
+        # Add embeddings and labels to the database
         image_embeddings.append(embed)
         image_labels.append(image_name)
         index.add(embed)
 
-        results.append(f"Dodano obraz: {image_name}")
+        results.append(f"Added image: {image_name}")
 
     return "\n".join(results)
 
 
-# Funkcja wyszukiwania w FAISS na podstawie nowego zdjęcia
+# Function to search FAISS based on a new image
 def find_closest_image(query_image):
     query_embed = extract_image_features(query_image)
-    D, I = index.search(query_embed, 1)  # Pobranie najbliższego sąsiada
-    return image_labels[I[0][0]] if I[0][0] < len(image_labels) else "Nie znaleziono pasującego obrazu."
+    D, I = index.search(query_embed, 1)  # Retrieve the closest neighbor
+    return image_labels[I[0][0]] if I[0][0] < len(image_labels) else "No matching image found."
 
 
 # Gradio UI
 def image_search_ui(database_images, query_image):
-    # Dodanie wielu obrazów do bazy
+    # Add multiple images to the database
     add_images_to_database(database_images)
 
-    # Wyszukanie najbliższego obrazu w bazie
+    # Find the closest image in the database
     closest_image = find_closest_image(query_image)
 
-    return f"Najbardziej podobna śrubka w bazie: {closest_image}"
+    return f"Most similar screw in the database: {closest_image}"
 
 
-# Tworzenie interfejsu Gradio
+# Creating the Gradio interface
 iface = gr.Interface(
     fn=image_search_ui,
     inputs=[
-        gr.File(file_count="multiple", file_types=["image"]),  # Wiele obrazów jako pliki
-        gr.Image(type="pil")  # Obraz do wyszukiwania
+        gr.File(file_count="multiple", file_types=["image"]),  # Multiple images as files
+        gr.Image(type="pil")  # Image for searching
     ],
     outputs="text",
-    title="System Rozpoznawania Śrubek",
-    description="Dodaj wiele zdjęć śrubek do bazy i znajdź najbardziej podobną śrubkę w bazie."
+    title="Screw Recognition System",
+    description="Add multiple images of screws to the database and find the most similar screw in the database."
 )
 
-# Uruchomienie interfejsu
+# Launching the interface
 if __name__ == "__main__":
     iface.launch()
