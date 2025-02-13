@@ -7,13 +7,12 @@ This project is a simple image-based screw recognition system that uses the BLIP
 To run this project, you need the following:
 
 - Python 3.8 or higher
-- Required Python libraries (listed in `requirements.txt`)
 
 ## Installation
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/screw-recognition-system.git
+   git clone git@github.com:Kleczyk/screw-recognition-system.git
    cd screw-recognition-system
    ```
 
@@ -32,7 +31,7 @@ To run this project, you need the following:
 
 1. **Run the application**:
    ```bash
-   python3 rag_test2.py
+   python rag_test2.py
    ```
 
 2. **Access the Gradio interface**:
