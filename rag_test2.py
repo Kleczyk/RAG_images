@@ -27,15 +27,6 @@ def extract_image_features(image):
     return features.numpy().astype('float32')
 
 
-# Sprawdzenie wymiaru osadzeń
-test_image = Image.new('RGB', (224, 224))  # Przykładowy obraz do testu
-test_embed = extract_image_features(test_image)
-embedding_dim = test_embed.shape[1]  # Pobranie wymiaru osadzeń
-
-# Tworzenie FAISS dla bazy obrazów
-index = faiss.IndexFlatL2(embedding_dim)  # Dostosowanie wymiaru indeksu FAISS
-image_embeddings = []
-image_labels = []
 
 
 # Funkcja dodawania obrazu do bazy
