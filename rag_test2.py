@@ -10,7 +10,6 @@ processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-larg
 model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large")
 
 # Funkcja do ekstrakcji cech obrazu
-
 def extract_image_features(image):
     """Ekstrahuje cechy obrazu jako wektor osadzeń."""
     image = image.convert('RGB')
@@ -19,16 +18,22 @@ def extract_image_features(image):
         features = model.vision_model(inputs.pixel_values)[1]  # Pobranie osadzeń wizualnych
     return features.numpy().astype('float32')
 
+# Sprawdzenie wymiaru osadzeń
+test_image = Image.new('RGB', (224, 224))  # Przykładowy obraz do testu
+test_embed = extract_image_features(test_image)
+embedding_dim = test_embed.shape[1]  # Pobranie wymiaru osadzeń
+
 # Tworzenie FAISS dla bazy obrazów
-index = faiss.IndexFlatL2(768)  # 768 to wymiar osadzeń BLIP-2
+index = faiss.IndexFlatL2(embedding_dim)  # Dostosowanie wymiaru indeksu FAISS
 image_embeddings = []
 image_labels = []
 
 # Funkcja dodawania obrazu do bazy
-
 def add_image_to_database(image, image_name):
     global index, image_embeddings, image_labels
     embed = extract_image_features(image)
+    if embed.shape[1] != embedding_dim:
+        raise ValueError(f"Wymiar osadzeń ({embed.shape[1]}) nie zgadza się z wymiarami indeksu FAISS ({embedding_dim}).")
     image_embeddings.append(embed)
     image_labels.append(image_name)
     index.add(embed)
