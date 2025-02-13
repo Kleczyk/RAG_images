@@ -16,6 +16,9 @@ def extract_image_features(image):
     # Konwersja obrazu do formatu RGB (jeśli nie jest w tym formacie)
     image = image.convert('RGB')
 
+    # Przeskalowanie obrazu do rozmiaru 224x224 (wymagany rozmiar dla modelu BLIP)
+    image = image.resize((224, 224))
+
     # Przetwarzanie obrazu za pomocą procesora BLIP
     inputs = processor(images=image, return_tensors="pt")
 
