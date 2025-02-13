@@ -9,13 +9,15 @@ import gradio as gr
 processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
 model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large")
 
+# Funkcja do ekstrakcji cech obrazu
+
 def extract_image_features(image):
     """Ekstrahuje cechy obrazu jako wektor osadzeń."""
     image = image.convert('RGB')
     inputs = processor(images=image, return_tensors="pt")
     with torch.no_grad():
-        embed = model.get_input_embeddings()(inputs.input_ids).mean(dim=1).numpy().astype('float32')
-    return embed
+        features = model.vision_model(inputs.pixel_values)[1]  # Pobranie osadzeń wizualnych
+    return features.numpy().astype('float32')
 
 # Tworzenie FAISS dla bazy obrazów
 index = faiss.IndexFlatL2(768)  # 768 to wymiar osadzeń BLIP-2
@@ -29,7 +31,7 @@ def add_image_to_database(image, image_name):
     embed = extract_image_features(image)
     image_embeddings.append(embed)
     image_labels.append(image_name)
-    index.add(np.array(embed, dtype='float32').reshape(1, -1))
+    index.add(embed)
     return f"Dodano obraz: {image_name}"
 
 # Funkcja wyszukiwania w FAISS na podstawie nowego zdjęcia
