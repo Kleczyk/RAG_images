@@ -4,6 +4,7 @@ import faiss
 import numpy as np
 from PIL import Image
 import gradio as gr
+import os
 
 # Inicjalizacja modelu BLIP-2
 processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
@@ -36,22 +37,34 @@ image_embeddings = []
 image_labels = []
 
 
-# Funkcja dodawania obrazu do bazy
-def add_image_to_database(image, image_name):
+# Funkcja dodawania wielu obrazów do bazy
+def add_images_to_database(images):
     global index, image_embeddings, image_labels
-    embed = extract_image_features(image)
+    results = []
 
-    # Jeśli indeks FAISS nie został jeszcze utworzony, utwórz go z odpowiednim wymiarem
-    if index is None:
-        embedding_dim = embed.shape[1]  # Pobranie wymiaru osadzeń z pierwszego obrazu
-        index = faiss.IndexFlatL2(embedding_dim)  # Inicjalizacja indeksu FAISS
+    for image in images:
+        # Pobranie nazwy pliku (bez ścieżki)
+        image_name = os.path.basename(image.name)
 
-    # Dodanie osadzeń i etykiety do bazy
-    image_embeddings.append(embed)
-    image_labels.append(image_name)
-    index.add(embed)
+        # Otwarcie obrazu za pomocą PIL
+        img = Image.open(image.name)
 
-    return f"Dodano obraz: {image_name}"
+        # Ekstrakcja cech obrazu
+        embed = extract_image_features(img)
+
+        # Jeśli indeks FAISS nie został jeszcze utworzony, utwórz go z odpowiednim wymiarem
+        if index is None:
+            embedding_dim = embed.shape[1]  # Pobranie wymiaru osadzeń z pierwszego obrazu
+            index = faiss.IndexFlatL2(embedding_dim)  # Inicjalizacja indeksu FAISS
+
+        # Dodanie osadzeń i etykiety do bazy
+        image_embeddings.append(embed)
+        image_labels.append(image_name)
+        index.add(embed)
+
+        results.append(f"Dodano obraz: {image_name}")
+
+    return "\n".join(results)
 
 
 # Funkcja wyszukiwania w FAISS na podstawie nowego zdjęcia
@@ -62,9 +75,9 @@ def find_closest_image(query_image):
 
 
 # Gradio UI
-def image_search_ui(database_image, query_image):
-    # Dodanie obrazu do bazy
-    add_image_to_database(database_image, "nowy_obiekt")
+def image_search_ui(database_images, query_image):
+    # Dodanie wielu obrazów do bazy
+    add_images_to_database(database_images)
 
     # Wyszukanie najbliższego obrazu w bazie
     closest_image = find_closest_image(query_image)
@@ -75,10 +88,13 @@ def image_search_ui(database_image, query_image):
 # Tworzenie interfejsu Gradio
 iface = gr.Interface(
     fn=image_search_ui,
-    inputs=[gr.Image(type="pil"), gr.Image(type="pil")],  # Obrazy jako PIL.Image
+    inputs=[
+        gr.File(file_count="multiple", file_types=["image"]),  # Wiele obrazów jako pliki
+        gr.Image(type="pil")  # Obraz do wyszukiwania
+    ],
     outputs="text",
     title="System Rozpoznawania Śrubek",
-    description="Dodaj zdjęcie śrubki do bazy i znajdź najbardziej podobną do niej śrubkę w bazie."
+    description="Dodaj wiele zdjęć śrubek do bazy i znajdź najbardziej podobną śrubkę w bazie."
 )
 
 # Uruchomienie interfejsu
